@@ -960,6 +960,27 @@ private partitionReady(){
     state.newCodePosition = ""
     state.newName = ""
     state.programmingMode = ""
+	
+    if(PanelType as int == 1) {
+        //Honeywell panels don't update Envisalink with closed/inactive status properly/timely
+        //therefore when the partition is ready, we can assume all contacts/motions are closed/inactive
+        //and we update them in HE. Note, if you bypass the zone, it may be updated with closed/inactive.
+        def zones = getChildDevices()
+        for (n in zones)
+        {
+            def zoneCurrentState = n.currentStates.find { item -> item.name.startsWith('motion')}
+            if (zoneCurrentState == null)
+                zoneCurrentState = n.currentStates.find { item -> item.name.startsWith('contact')}
+    
+            if (zoneCurrentState.value != 'closed' && zoneCurrentState.value != 'inactive')
+            {
+                def length = n.deviceNetworkId.size();
+                def zoneId = n.deviceNetworkId.substring(length - 3)
+                ifDebug("Inferred status for zone: " + zoneId)
+                zoneClosed("000" + zoneId)
+            }
+        }
+    }	
 }
 
 private partitionNotReady(){
