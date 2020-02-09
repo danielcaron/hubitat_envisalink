@@ -737,18 +737,25 @@ def parse(String message) {
 		}  
 		if(message.take(3) == "%01") {
 			ifDebug("Received %01 (Zone State Change) message")
-			def ZoneState = Integer.parseInt(message[18..19] + message[16..17] + message[14..15] + message[12..13] + message[10..11] + message[8..9] + message[6..7] + message[4..5],16)
-			//log.info "OLD Zone State Change: Zone String [" + ZoneState + "]" 
-            //log.info "OLD ZoneMessage: $message"
-			ifDebug("         Zone State Change: Zone String [" + ZoneState + "]")
-			for (i = 1; i <65; i++) {
-				if ( ZoneState & (2**(i-1)) ) {
-					ifDebug ("     Zone State Change: Zone " + i + " Tripped!")
-                    //log.info "OLD Zone State Change: Zone " + i + " Open"
-					zoneOpen("000" + i.toString())
-				} else {
-                    //log.info "OLD Zone State Change: Zone " + i + " Closed"
-					zoneClosed("000" + i.toString())
+			def trimmedMessage = message[4..19]
+			def ZoneState = hubitat.helper.HexUtils.hexStringToByteArray(trimmedMessage)
+			int counter = 0
+			for (int i = 0; i < ZoneState.length; i++)
+			{
+				byte b = ZoneState[i]
+				for (int j = 0; j < 8; j++)
+				{
+					counter++
+					if (isBitSet(b, j))
+					{
+						//log.info "Zone State Change: Zone " + counter + " Open"
+						zoneOpen("000" + counter)
+					}
+					else
+					{
+						//log.info "Zone State Change: Zone " + counter + " Closed"
+						zoneClosed("000" + counter)
+					}
 				}
 			}
 		}
@@ -2094,6 +2101,9 @@ private send_Event(evnt) {
 ]
 
 /***********************************************************************************************************************
+* Version: 0.8.4
+*   Honeywell: Fixed Zone State Change bug for higher zone #'s
+*
 * Version: 0.8.3
 *   Added selective-closing in zoneClose() (only close if open)
 *   Added selective-clearing in clearAllZones() (only clear if open)
